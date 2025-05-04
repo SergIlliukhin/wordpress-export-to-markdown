@@ -110,7 +110,7 @@ export function load() {
 			name: 'frontmatter-fields',
 			type: 'list',
 			description: 'Frontmatter fields',
-			default: 'title,date,categories,tags,coverImage,draft'
+			default: 'title,date,author,categories,tags,coverImage,draft'
 		},
 		{
 			name: 'request-delay',

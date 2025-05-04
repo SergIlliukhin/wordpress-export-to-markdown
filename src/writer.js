@@ -75,21 +75,29 @@ async function loadMarkdownFilePromise(post) {
 
 	Object.entries(post.frontmatter).forEach(([key, value]) => {
 		let outputValue;
+		if (value === undefined) {
+			return undefined;
+		}
 		if (Array.isArray(value)) {
 			if (value.length > 0) {
 				// array of one or more strings
 				outputValue = value.reduce((list, item) => `${list}\n  - "${item}"`, '');
 			}
+		} else if (typeof value === 'object' && value !== null) {
+			// Handle author object specially
+			if (key === 'author' && value.username) {
+				outputValue = `\n  username: "${value.username}"\n  display_name: "${value.display_name}"`;
+			} else {
+				outputValue = Object.entries(value)
+					.map(([k, v]) => `  ${k}: "${v}"`)
+					.join('\n');
+			}
 		} else if (Number.isInteger(value)) {
 			// output unquoted
 			outputValue = value.toString();
 		} else if (value instanceof luxon.DateTime) {
-			if (shared.config.dateFormat) {
-				outputValue = value.toFormat(shared.config.dateFormat);
-			} else {
-				outputValue = shared.config.includeTime ? value.toISO() : value.toISODate();
-			}
-
+			// Format date in ISO format
+			outputValue = value.toISODate();
 			if (shared.config.quoteDate) {
 				outputValue = `"${outputValue}"`;
 			}
@@ -97,11 +105,8 @@ async function loadMarkdownFilePromise(post) {
 			// output unquoted
 			outputValue = value.toString();
 		} else {
-			// single string value
-			const escapedValue = (value ?? '').replace(/"/g, '\\"');
-			if (escapedValue.length > 0) {
-				outputValue = `"${escapedValue}"`;
-			}
+			// output quoted
+			outputValue = shared.config.quoteStrings ? `"${value}"` : value;
 		}
 
 		if (outputValue !== undefined) {

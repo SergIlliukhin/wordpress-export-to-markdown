@@ -10,8 +10,26 @@ export async function parseFilePromise() {
 	shared.logHeading('Parsing');
 	const content = await fs.promises.readFile(shared.config.input, 'utf8');
 	const rssData = await data.load(content);
-	const allPostData = rssData.child('channel').children('item');
+	
+	// Extract author information first
+	const authorMap = new Map();
+	const authorNodes = rssData.child('channel').children('author');
+	console.log('Found', authorNodes.length, 'author nodes');
+	authorNodes.forEach(authorNode => {
+		const login = authorNode.childValue('author_login');
+		const displayName = authorNode.childValue('author_display_name');
+		console.log('Author:', login, displayName);
+		
+		authorMap.set(login, {
+			username: login,
+			display_name: displayName
+		});
+	});
+	
+	// Store author map in shared config for use in frontmatter
+	shared.config.authorMap = authorMap;
 
+	const allPostData = rssData.child('channel').children('item');
 	const postTypes = getPostTypes(allPostData);
 	const posts = collectPosts(allPostData, postTypes);
 

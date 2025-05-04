@@ -1,7 +1,22 @@
+import * as shared from './shared.js';
+
 export function author(post) {
-	// not decoded (WordPress doesn't allow funky characters in usernames anyway)
-	// surprisingly, does not always exist (squarespace exports, for example)
-	return post.data.optionalChildValue('creator');
+	// Get username from post data
+	const username = post.data.optionalChildValue('creator');
+	console.log('Author username:', username);
+	if (!username) {
+		return undefined;
+	}
+	
+	// Look up full author information from the map
+	const authorInfo = shared.config.authorMap.get(username);
+	console.log('Author info from map:', authorInfo);
+	
+	// Return both username and display_name, using username as display_name if not found in map
+	return {
+		username: username,
+		display_name: authorInfo?.display_name || username
+	};
 }
 
 export function categories(post) {
@@ -18,8 +33,9 @@ export function coverImage(post) {
 }
 
 export function date(post) {
-	// a luxon datetime object, previously parsed
-	return post.date;
+	// Return formatted date string instead of DateTime object
+	if (!post.date) return undefined;
+	return post.date.toISODate();
 }
 
 export function draft(post) {
