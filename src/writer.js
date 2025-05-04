@@ -86,7 +86,7 @@ async function loadMarkdownFilePromise(post) {
 		} else if (typeof value === 'object' && value !== null) {
 			// Handle author object specially
 			if (key === 'author' && value.username) {
-				outputValue = `\n  username: "${value.username}"\n  display_name: "${value.display_name}"`;
+				outputValue = `\n  username: "${value.username}"\n  display_name: "${value.display_name.replace(/"/g, '\\"')}"`;
 			} else {
 				outputValue = Object.entries(value)
 					.map(([k, v]) => `  ${k}: "${v}"`)
@@ -105,8 +105,13 @@ async function loadMarkdownFilePromise(post) {
 			// output unquoted
 			outputValue = value.toString();
 		} else {
-			// output quoted
-			outputValue = shared.config.quoteStrings ? `"${value}"` : value;
+			// Always quote title values, and use config for other strings
+			if (key === 'title') {
+				// Escape quotes in title values
+				outputValue = `"${value.replace(/"/g, '\\"')}"`;
+			} else {
+				outputValue = shared.config.quoteStrings ? `"${value}"` : value;
+			}
 		}
 
 		if (outputValue !== undefined) {
