@@ -109,6 +109,9 @@ async function loadMarkdownFilePromise(post) {
 			if (key === 'title') {
 				// Escape quotes in title values
 				outputValue = `"${value.replace(/"/g, '\\"')}"`;
+			} else if (key === 'coverImage') {
+				// Always quote coverImage values
+				outputValue = `"${value.replace(/"/g, '\\"')}"`;
 			} else {
 				outputValue = shared.config.quoteStrings ? `"${value}"` : value;
 			}
