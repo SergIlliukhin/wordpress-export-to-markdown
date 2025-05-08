@@ -28,7 +28,23 @@ export function categories(post) {
 }
 
 export function coverImage(post) {
-	// cover image filename, previously parsed and decoded
+	// If no cover image, return undefined
+	if (!post.coverImage) return undefined;
+	
+	// If there's a full URL path stored, extract just the relative part
+	if (post.coverImageUrl) {
+		// Extract the relative path from the URL
+		const urlObj = new URL(post.coverImageUrl);
+		const pathParts = urlObj.pathname.split('/');
+		
+		// Look for 'wp-content' in the path and keep everything after that
+		const wpContentIndex = pathParts.indexOf('wp-content');
+		if (wpContentIndex !== -1) {
+			return pathParts.slice(wpContentIndex).join('/');
+		}
+	}
+	
+	// Fallback to just the filename if no full URL is available
 	return post.coverImage;
 }
 

@@ -41,6 +41,34 @@ export async function parseFilePromise() {
 		images.push(...collectScrapedImages(allPostData, postTypes));
 	}
 
+	// Process coverImage information regardless of saveImages setting
+	// Collect only attached images that are cover images
+	if (shared.config.saveImages === 'none') {
+		const coverImages = [];
+		allPostData.forEach(post => {
+			const coverImageId = getPostMetaValue(post, '_thumbnail_id');
+			if (coverImageId) {
+				// Find the attachment
+				const attachment = allPostData.find(item => 
+					item.childValue('post_type') === 'attachment' && 
+					item.childValue('post_id') === coverImageId
+				);
+				if (attachment) {
+					const url = attachment.childValue('attachment_url');
+					if (url) {
+						coverImages.push({
+							id: coverImageId,
+							postId: post.childValue('post_id'),
+							url: url,
+							originalUrl: url // Store the original URL for relative path extraction
+						});
+					}
+				}
+			}
+		});
+		images.push(...coverImages);
+	}
+
 	mergeImagesIntoPosts(images, posts);
 	populateFrontmatter(posts);
 
@@ -103,6 +131,30 @@ function collectPosts(allPostData, postTypes) {
 }
 
 function buildPost(data) {
+	const coverImageId = getPostMetaValue(data, '_thumbnail_id');
+	let coverImage;
+	let coverImageUrl;
+	
+	// If there's a cover image ID, try to find its URL and filename
+	if (coverImageId && data.parent) {
+		try {
+			const attachments = data.parent.children('item');
+			const coverImageAttachment = attachments.find(item => 
+				item.childValue('post_type') === 'attachment' && 
+				item.childValue('post_id') === coverImageId
+			);
+			if (coverImageAttachment) {
+				const url = coverImageAttachment.childValue('attachment_url');
+				if (url) {
+					coverImageUrl = url;
+					coverImage = shared.getFilenameFromUrl(url);
+				}
+			}
+		} catch (error) {
+			console.log(chalk.yellow(`Warning: Could not process cover image for post ${data.childValue('post_id')}`));
+		}
+	}
+
 	return {
 		// full raw post data
 		data,
@@ -116,10 +168,9 @@ function buildPost(data) {
 		isDraft: data.childValue('status') === 'draft',
 		slug: decodeURIComponent(data.childValue('post_name')),
 		date: getPostDate(data),
-		coverImageId: getPostMetaValue(data, '_thumbnail_id'),
-
-		// these are possibly set later in mergeImagesIntoPosts()
-		coverImage: undefined,
+		coverImageId,
+		coverImage,
+		coverImageUrl,
 		imageUrls: []
 	};
 }
@@ -197,9 +248,15 @@ function mergeImagesIntoPosts(images, posts) {
 			}
 
 			// this image was set as the featured image for this post
-			if (image.id === post.coverImageId) {
+			if (image.id === post.coverImageId && !post.coverImage) {
 				shouldAttach = true;
 				post.coverImage = shared.getFilenameFromUrl(image.url);
+				// Store the original URL for relative path extraction
+				if (image.originalUrl) {
+					post.coverImageUrl = image.originalUrl;
+				} else {
+					post.coverImageUrl = image.url;
+				}
 			}
 
 			if (shouldAttach && !post.imageUrls.includes(image.url)) {
